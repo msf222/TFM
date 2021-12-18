@@ -98,15 +98,13 @@ tar -xvf FLASH-1.2.11-Linux-x86_64.tar.gz                                # desco
 ### Ref. https://github.com/kaist-ina/BWA-MEME
 
 ## Instalacion
-
+```
 git clone https://github.com/kaist-ina/BWA-MEME.git BWA-MEME
 cd BWA-MEME
-
 make clean
 make -j<num_threads> arch=avx2
-
 wget https://rustup.rs/
-
+```
 ## Descarga genoma de referencia
 
 wget https://hgdownload.soe.ucsc.edu/goldenPath/hg38/chromosomes/chr21.fa.gz (Chr21)
@@ -131,3 +129,21 @@ wget https://ina.kaist.ac.kr/~bwa-meme/human_g1k_v37.fasta.suffixarray_uint64_L2
 ./bwa-mem2 mem -t 8 in_21 cut_out.1.fastq.gz > out_21.sam (Chr21)
 
 ./bwa-mem2 mem -Y -K 100000000 -t 8 -7 /home/martasf22/BWA-MEME/human_g1k_v37.fasta /home/martasf22/cut_out.1.fastq.gz -o output_meme.sam
+
+## Identificacion de pares duplicados
+
+# Instalacion Samtools
+
+wget https://github.com/samtools/samtools/releases/download/1.3.1/samtools-1.3.1.tar.bz2 -O samtools.tar.bz2
+tar -xjvf samtools.tar.bz2
+cd samtools-1.3.1
+make
+sudo make prefix=/usr/local/bin install
+
+# Ordenando el archivo y anadiendo marcadores
+
+samtools collate -o namecollate.bam out.sam
+samtools fixmate -m namecollate.bam fixmate.bam
+samtools sort -o positionsort.bam fixmate.bam
+samtools markdup positionsort.bam markdup.bam
+
