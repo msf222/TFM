@@ -148,7 +148,7 @@ samtools collate -l 5 ./BWA-MEME/out_21.sam.gz out_collate
 ```
 ### Completando las coordenadas de relación a la posición y agregando etiquetas ms que usara 'markdup' para seleccionar las mejores lecturas que seran guardadas.
 ```
-samtools fixmate -m namecollate.bam fixmate.bam 
+samtools fixmate -m out_collate.bam fixmate.bam 
 ```
 ### Ordenando las alineaciones por coordenadas.
 ```
