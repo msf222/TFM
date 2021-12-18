@@ -130,20 +130,32 @@ wget https://ina.kaist.ac.kr/~bwa-meme/human_g1k_v37.fasta.suffixarray_uint64_L2
 
 ./bwa-mem2 mem -Y -K 100000000 -t 8 -7 /home/martasf22/BWA-MEME/human_g1k_v37.fasta /home/martasf22/cut_out.1.fastq.gz -o output_meme.sam
 
-## Identificacion de pares duplicados
+# Samtools (Identificacion de pares duplicados)
+Ref. http://www.htslib.org/
 
 # Instalacion Samtools
-
+```
 wget https://github.com/samtools/samtools/releases/download/1.3.1/samtools-1.3.1.tar.bz2 -O samtools.tar.bz2
 tar -xjvf samtools.tar.bz2
 cd samtools-1.3.1
 make
 sudo make prefix=/usr/local/bin install
-
-# Ordenando el archivo y anadiendo marcadores
-
-samtools collate -o namecollate.bam out.sam
-samtools fixmate -m namecollate.bam fixmate.bam
+```
+## Ordenando el archivo y anadiendo marcadores
+### Agrupando las lecturas del mismo nombre en grupos contiguos
+```
+samtools collate -l 5 ./BWA-MEME/out_21.sam.gz out_collate
+```
+### Completando las coordenadas de relación a la posición y agregando etiquetas ms que usara 'markdup' para seleccionar las mejores lecturas que seran guardadas.
+```
+samtools fixmate -m namecollate.bam fixmate.bam 
+```
+### Ordenando las alineaciones por coordenadas.
+```
 samtools sort -o positionsort.bam fixmate.bam
+```
+### marcando alineaciones duplicadas.
+```
 samtools markdup positionsort.bam markdup.bam
+```
 
