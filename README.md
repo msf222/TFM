@@ -154,7 +154,7 @@ samtools fixmate -m namecollate.bam fixmate.bam
 ```
 samtools sort -o positionsort.bam fixmate.bam
 ```
-### marcando alineaciones duplicadas.
+### Marcando alineaciones duplicadas.
 ```
 samtools markdup positionsort.bam markdup.bam
 ```
