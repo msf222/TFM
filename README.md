@@ -1,21 +1,15 @@
 # TFM
 
 # Descarga de los datos 
-### Creando una carpeta
-```
-mkdir Datos
-```
-### Descargando los datos
+
+## Descargando los datos
 ```
 wget https://sra-downloadb.be-md.ncbi.nlm.nih.gov/sos1/sra-pub-run-5/SRR2163030/SRR2163030.1
 ```
 # Transformacion a fastaq
 
 ## Instalacion de la herramienta sratoolkit
-### Creando una carpeta
-```
-mkdir sra-tools
-```
+
 ### Descargando sratoolkit
 ```
 curl https://ftp-trace.ncbi.nlm.nih.gov/sra/sdk/2.9.6/sratoolkit.2.9.6-ubuntu64.tar.gz -o sratoolkit.2.9.6-ubuntu64.tar.gz
@@ -82,7 +76,7 @@ python deriveFeatureSets.py --fastq1 ./cut_out.1.fastq.gz --fastq2 ./cut_out.2.f
 python seqQscorer.py --indir ./Results_seQ_2/ --species human --runtype paired-end --bestCalib --probOut ./the_probability.tsv --compOut ./comprehensive_output.txt --seed 42 --sampleID cut_out.1.fastq
 ```
 
-# Flash (Union de los reads Forward y Reverse)
+# Herramienta Flash (Union de los reads Forward y Reverse)
 ### Ref. https://github.com/genome-vendor/FLASH/blob/master/MANUAL
 
 ## Instalación
@@ -94,7 +88,7 @@ tar -xvf FLASH-1.2.11-Linux-x86_64.tar.gz                                # desco
 ```
 ./flash ./cut_out.1.fastq.gz ./cut_out.2.fastq.gz -t 8 -z -M 101
 ```
-# BwaMeme (Mapeo de referencia)
+# Herramienta BwaMeme (Mapeo de referencia)
 ### Ref. https://github.com/kaist-ina/BWA-MEME
 
 ## Instalacion
@@ -109,31 +103,18 @@ wget https://rustup.rs/
 
 wget https://hgdownload.soe.ucsc.edu/goldenPath/hg38/chromosomes/chr21.fa.gz (Chr21)
 
-wget https://hgdownload.soe.ucsc.edu/goldenPath/hg38/chromosomes/human_g1k_v37.fasta.gz 
-gunzip human_g1k_v37.fasta.gz
-
 ## Construyendo el indice
 
 ./bwa-mem2 index -p in_21 chr21.fa.gz (Chr21)
-
-./bwa-mem2 index -a meme -t 8 human_g1k_v37.fasta
-./build_rmis_dna.sh human_g1k_v37.fasta
-
-## Descargando ficheros necesarios
-
-wget https://ina.kaist.ac.kr/~bwa-meme/human_g1k_v37.fasta.suffixarray_uint64_L1_PARAMETERS
-wget https://ina.kaist.ac.kr/~bwa-meme/human_g1k_v37.fasta.suffixarray_uint64_L2_PARAMETERS
 
 ## Alineamiento
 
 ./bwa-mem2 mem -t 8 in_21 cut_out.1.fastq.gz > out_21.sam (Chr21)
 
-./bwa-mem2 mem -Y -K 100000000 -t 8 -7 /home/martasf22/BWA-MEME/human_g1k_v37.fasta /home/martasf22/cut_out.1.fastq.gz -o output_meme.sam
+# Herramienta Samtools (Identificacion de pares duplicados)
+### Ref. http://www.htslib.org/
 
-# Samtools (Identificacion de pares duplicados)
-Ref. http://www.htslib.org/
-
-# Instalacion Samtools
+## Instalacion Samtools
 ```
 wget https://github.com/samtools/samtools/releases/download/1.3.1/samtools-1.3.1.tar.bz2 -O samtools.tar.bz2
 tar -xjvf samtools.tar.bz2
@@ -158,4 +139,69 @@ samtools sort -o positionsort.bam fixmate.bam
 ```
 samtools markdup positionsort.bam markdup.bam
 ```
+# Herramienta Deep-variant (Llamada a variantes)
 
+## Instalacion
+```
+sudo apt -y update
+sudo apt-get -y install docker.io
+sudo docker pull google/deepvariant:1.3.0
+```
+## Creando directorios de entrada y salida
+```
+OUTPUT_DIR="./quickstart-output"
+mkdir -p "./quickstart-output"
+INPUT_DIR="./quickstart-testdata"
+mkdir -p "./quickstart-testdata"
+```
+## Generando archivo VCF
+```
+sudo docker run -v "./quickstart-testdata/":"/input" -v "./quickstart-output/":"/output" google/deepvariant:"1.3.0" /opt/deepvariant/bin/run_deepvariant --model_type=WGS --ref=/input/chr21.fa --reads=/input/markdup.bam --output_vcf=/output/output.vcf.gz --output_gvcf=/output/output.g.vcf.gz --num_shards=8
+```
+
+# Herramienta ForestQC (Refinamiento de llamada)
+## Instalacion
+```
+conda install forestqc -c avallonking
+conda update forestqc -c avallonking
+```
+## Dividiendo variantes por calidad
+### Estableciendo umbrales para Outlier_GQ y Outlier_DP.
+```
+ForestQC set_outlier -m 1G -i ./quickstart-output/output.vcf.gz
+```
+### Generando tabla de contenido GC para nuestro genoma de referencia
+```
+ForestQC compute_gc -i ./chr21.fa -o GC_content
+```
+### Calcular las estadisticas del archivo VCF 
+```
+ForestQC stat -i ./quickstart-output/output.vcf.gz -o statics_Forest -c ./ForestQC/GC_content --gq 20 --dp 13
+```
+### Dividiendo el dataset por calidad
+```
+ForestQC split -i /./ForestQC/statics_Forest
+```
+###  Marcando posiciones de las variantes no clasificadas y filtrandolas
+```
+awk -F "\t" 'NR>1{print $2"\t"$3}' gray.statics_Forest > bad_variants_positions
+vcftools --gzvcf output.vcf.gz --exclude-positions bad_variants_positions --recode --recode-INFO-all -c | gzip -c > output_vcf_good_variants
+```
+### Filtrando variantes no PASS
+```
+vcftools --gzvcf ./ForestQC/output_vcf_good_variants.vcf.gz --remove-filtered-all --recode --recode-INFO-all -c | gzip -c > output_vcf_filter_variants.vcf.gz
+```
+# Herramienta snpEff (Anotacion de variantes)
+## Instalacion
+```
+wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip
+unzip snpEff_latest_core.zip
+```
+## Descargando anotaciones del genoma hg38
+```
+java -jar snpEff.jar download -v hg38
+```
+## Anotando variantes
+```
+java -Xmx8g -jar snpEff.jar hg38 /./output_vcf_filter_variants.vcf.gz > test.chr21_filter.ann.vcf
+```
