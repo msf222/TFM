@@ -140,7 +140,7 @@ samtools sort -o positionsort.bam fixmate.bam
 samtools markdup positionsort.bam markdup.bam
 ```
 # Herramienta Deep-variant (Llamada a variantes)
-
+### Ref. https://github.com/google/deepvariant
 ## Instalacion
 ```
 sudo apt -y update
@@ -160,6 +160,7 @@ sudo docker run -v "./quickstart-testdata/":"/input" -v "./quickstart-output/":"
 ```
 
 # Herramienta ForestQC (Refinamiento de llamada)
+### Ref. https://github.com/avallonking/ForestQC
 ## Instalacion
 ```
 conda install forestqc -c avallonking
@@ -192,6 +193,7 @@ vcftools --gzvcf output.vcf.gz --exclude-positions bad_variants_positions --reco
 vcftools --gzvcf ./ForestQC/output_vcf_good_variants.vcf.gz --remove-filtered-all --recode --recode-INFO-all -c | gzip -c > output_vcf_filter_variants.vcf.gz
 ```
 # Herramienta snpEff (Anotacion de variantes)
+### Ref. http://pcingola.github.io/SnpEff/se_running/
 ## Instalacion
 ```
 wget https://snpeff.blob.core.windows.net/versions/snpEff_latest_core.zip
