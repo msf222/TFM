@@ -207,3 +207,77 @@ java -jar snpEff.jar download -v hg38
 ```
 java -Xmx8g -jar snpEff.jar hg38 /./output_vcf_filter_variants.vcf.gz > test.chr21_filter.ann.vcf
 ```
+# Código desarrollo de aplicación Shiny para la visualización y filtrado de variantes.
+```
+library(shiny)
+library(ggplot2)
+library(vcfR)
+library(stringr)
+
+input <- read.vcfR(
+  "vcf.vcf",
+  limit = 1e+07,
+  nrows = -1,
+  skip = 0,
+  cols = NULL,
+  convertNA = TRUE,
+  checkFile = TRUE,
+  check_keys = TRUE,
+  verbose = TRUE
+)
+
+table <- (input@fix)[,-8]
+table <- as.data.frame(table)
+table$IMPACT <- sapply(str_split(input@fix[,8], "\\|"), function (x) (x[3]))
+table$TYPE <- sapply(str_split(input@fix[,8], "\\|"), function (x) (x[6]))
+table$ANOTATION <- sapply(str_split(input@fix[,8], "\\|"), function (x) (x[2]))
+table$GEN <- sapply(str_split(input@fix[,8], "\\|"), function (x) (x[4]))
+table <- table[,-3]
+
+
+
+ui <- fluidPage(
+  titlePanel("VisualizaciÃ³n y filtrado de variantes"),
+  
+  # Create a new Row in the UI for selectInputs
+  fluidRow(
+    column(4,
+           selectInput("imp",
+                       "Impacto:",
+                       c("All",
+                         unique(as.character(table$IMPACT)))
+    ),
+  ),
+  
+  column(4,
+         selectInput("tip",
+                     "AnotaciÃ³n:",
+                     c("All",
+                       unique(as.character(table$ANOTATION)))
+         ),
+  ),
+  
+  
+  # Create a new row for the table.
+  DT::dataTableOutput("table")
+)
+)
+
+
+server <- function(input, output) {
+  
+  output$table <- DT::renderDataTable(DT::datatable({
+    data <- table
+    if (input$imp != "All") {
+      data <- data[data$IMPACT == input$imp,]
+    }
+    if (input$tip != "All") {
+      data <- data[data$ANOTATION == input$tip,]
+    }
+    data
+  }))
+  
+}
+
+shinyApp(ui = ui, server = server)
+```
